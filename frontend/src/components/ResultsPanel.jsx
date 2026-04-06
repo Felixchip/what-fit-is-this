@@ -41,7 +41,13 @@ export default function ResultsPanel({ results }) {
                   </span>
                 </div>
                 
-                <div className="result-desc text-muted">
+                {item.buyLocations && item.buyLocations.length > 0 && (
+                  <div className="result-locations text-green" style={{fontSize: '12px', marginTop: '8px', letterSpacing: '1px'}}>
+                    LOCATIONS: {item.buyLocations.join(' // ').toUpperCase()}
+                  </div>
+                )}
+                
+                <div className="result-desc text-muted" style={{marginTop: '12px'}}>
                   {item.description}
                 </div>
               </div>

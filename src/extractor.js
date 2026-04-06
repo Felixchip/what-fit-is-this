@@ -37,15 +37,32 @@ async function extractFrames(url) {
 }
 
 async function downloadVideo(url, tmpDir) {
-  const outputPath = path.join(tmpDir, 'video.%(ext)s');
+  const outputPath = path.join(tmpDir, 'video.mp4');
 
+  // TikTok heavily blocks Datacenter IPs (Railway). 
+  // We use a free API fallback specifically for TikToks.
+  if (url.includes('tiktok.com')) {
+    try {
+      const apiRes = await fetch(`https://tikwm.com/api/?url=${url}`);
+      const apiData = await apiRes.json();
+      if (apiData.data && apiData.data.play) {
+        const mp4Res = await fetch(apiData.data.play);
+        const buffer = await mp4Res.arrayBuffer();
+        fs.writeFileSync(outputPath, Buffer.from(buffer));
+        return outputPath;
+      }
+    } catch (e) {
+      console.log('TikWM fallback failed:', e.message);
+    }
+  }
+
+  const defaultOutputPath = path.join(tmpDir, 'video.%(ext)s');
   const args = [
     '--no-playlist',
     '--format', 'bestvideo[height<=720][ext=mp4]/bestvideo[height<=720]/best[height<=720]/best',
-    '--output', outputPath,
+    '--output', defaultOutputPath,
     '--no-warnings',
     '--quiet',
-    // Cookies handling — needed for some IG content
     '--add-header', 'User-Agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
     url,
   ];
@@ -53,10 +70,10 @@ async function downloadVideo(url, tmpDir) {
   try {
     await execFileAsync('yt-dlp', args, { timeout: 60000 });
   } catch (err) {
-    throw new Error('Could not download video. Make sure the post is public.');
+    throw new Error('Could not download video. Defaulting to block. Ensure post is public.');
   }
 
-  // Find the downloaded file
+  // Find the downloaded file from yt-dlp
   const files = fs.readdirSync(tmpDir).filter(f => f.startsWith('video.'));
   if (!files.length) throw new Error('Download succeeded but no video file found');
 

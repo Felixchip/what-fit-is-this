@@ -64,8 +64,40 @@ app.post('/analyze', limiter, async (req, res) => {
   try {
     const msg = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system: `You are a fashion product detection AI. Identify every clothing item, accessory, footwear, or fashion product visible on any person in the image. Return ONLY a valid JSON array, no markdown or explanation. Each object: {"category":"Sneakers|T-Shirt|Pants|Cap|Watch|Bag|Jacket|etc","name":"specific product name","brand":"brand or Unknown","description":"1-2 sentence visual description","priceMin":40,"priceMax":200,"currency":"USD","searchQuery":"best search string","confidence":"high|medium|low"}. Return 1-8 items. JSON array only.`,
+      max_tokens: 4096,
+      tools: [
+        {
+          name: "record_fashion_items",
+          description: "Record the fashion products found in the image.",
+          input_schema: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    category: { type: "string" },
+                    name: { type: "string", description: "Specific product name or a highly descriptive stylistic name if generic" },
+                    brand: { type: "string", description: "The precise brand if visible, or a highly similar aesthetic brand. Use 'Vintage/Unbranded' if generic." },
+                    description: { type: "string", description: "Vivid visual description focusing on cut, fabric, color, and unique hardware." },
+                    priceMin: { type: "number" },
+                    priceMax: { type: "number" },
+                    currency: { type: "string", description: "Always USD" },
+                    buyLocations: { type: "array", items: { type: "string" }, description: "1-3 realistic retailers. If the item is small, obscure, or seemingly unbranded, prioritize secondhand marketplaces (e.g. eBay, Depop, Grailed, Etsy)."},
+                    searchQuery: { type: "string", description: "Highly optimized Google Shopping search string" },
+                    confidence: { type: "string", enum: ["high", "medium", "low"] }
+                  },
+                  required: ["category", "name", "brand", "description", "priceMin", "priceMax", "currency", "buyLocations", "searchQuery", "confidence"]
+                }
+              }
+            },
+            required: ["items"]
+          }
+        }
+      ],
+      tool_choice: { type: "tool", name: "record_fashion_items" },
+      system: `You are an elite fashion product detection AI. Identify every clothing item, accessory, footwear, or fashion product visible. For small, obscure, or unbranded items, identify the core style/silhouette, deduce visually matching brands, or label it as 'Vintage/Unbranded' and route it to marketplaces like eBay/Depop. Extract 1-8 items.`,
       messages: [
         {
           role: "user",
@@ -80,14 +112,20 @@ app.post('/analyze', limiter, async (req, res) => {
             },
             {
               type: "text",
-              text: "Identify all clothing and fashion products in this image. Remember, return ONLY a valid JSON array, NO markdown formatting or other explanation."
+              text: "Identify all clothing and fashion products. Call the tool to meticulously record each detected item."
             }
           ],
         }
       ],
     });
 
-    res.json({ ok: true, result: msg.content[0].text });
+    const toolUse = msg.content.find(c => c.type === 'tool_use');
+    if (!toolUse || !toolUse.input || !toolUse.input.items) {
+      throw new Error("AI failed to return fashion metadata array");
+    }
+    
+    // We stringify it so the frontend can safely parse it without changing frontend logic
+    res.json({ ok: true, result: JSON.stringify(toolUse.input.items) });
   } catch (err) {
     console.error('[analyze] error:', err.message);
     res.status(500).json({ error: err.message || 'Analysis failed' });
