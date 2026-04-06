@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>FITCHECK//</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --green: #00ff41;
+  --red: #ff3a3a;
+  --amber: #ffb800;
+  --bg: #0a0a0a;
+  --panel: #131313;
+  --border: #222;
+  --text: #bbb;
+  --mono: 'Share Tech Mono', monospace;
+  --display: 'Bebas Neue', sans-serif;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: calc(var(--safe-top) + 10px) 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo { font-family: var(--display); font-size: 24px; letter-spacing: 4px; color: var(--green); line-height: 1; }
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--green);
+  border: 1px solid #1a3a1f;
+  border-radius: 20px;
+  padding: 5px 10px;
+}
+
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: blink 1.2s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── Scroll body ── */
+.scroll-body {
+  padding: 16px 16px calc(90px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.label { font-size: 9px; letter-spacing: 3px; color: #3a3a3a; display: block; margin-bottom: 8px; }
+
+/* ── Tabs ── */
+.tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.tab {
+  background: transparent; border: none; border-right: 1px solid var(--border);
+  padding: 14px 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+  color: #3a3a3a; cursor: pointer; touch-action: manipulation; transition: background 0.15s, color 0.15s;
+}
+.tab:last-child { border-right: none; }
+.tab.active { background: var(--green); color: #000; }
+
+/* ── URL panel ── */
+.url-panel { display: flex; flex-direction: column; gap: 10px; }
+.url-panel.hidden { display: none; }
+
+.platform-row { display: flex; gap: 6px; }
+.chip { font-size: 9px; letter-spacing: 1px; padding: 4px 10px; border-radius: 4px; border: 1px solid; }
+.chip-ig { border-color: #7b2fa0; color: #b060e0; background: #1a0a22; }
+.chip-tt { border-color: #a01030; color: #e04060; background: #220a10; }
+
+.text-input {
+  width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none;
+  -webkit-appearance: none; transition: border-color 0.2s;
+}
+.text-input:focus { border-color: #333; }
+.text-input::placeholder { color: #242424; }
+
+.backend-wrap {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.backend-top { display: flex; align-items: center; justify-content: space-between; }
+.b-status { font-size: 9px; letter-spacing: 1px; padding: 3px 8px; border-radius: 3px; }
+.b-idle { color: #3a3a3a; }
+.b-ok { color: var(--green); border: 1px solid #1a3a1f; background: #0a1a0d; }
+.b-err { color: var(--red); border: 1px solid #3a1010; background: #1a0808; }
+.b-loading { color: var(--amber); border: 1px solid #3a2800; background: #1a1200; }
+.b-hint { font-size: 9px; color: #242424; letter-spacing: 0.5px; line-height: 1.6; }
+
+.outline-btn {
+  width: 100%; background: transparent; border: 1px solid var(--green); border-radius: 8px;
+  padding: 14px; font-family: var(--display); font-size: 18px; letter-spacing: 3px;
+  color: var(--green); cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
+  transition: background 0.15s;
+}
+.outline-btn:active { background: rgba(0,255,65,0.08); }
+.outline-btn:disabled { opacity: 0.25; }
+
+/* ── Upload panel ── */
+.upload-panel { display: none; }
+.upload-panel.visible { display: block; }
+
+.upload-zone {
+  border: 1px dashed #252525; border-radius: 8px; padding: 40px 20px; text-align: center;
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  cursor: pointer; touch-action: manipulation;
+}
+.upload-zone:active { border-color: var(--green); background: rgba(0,255,65,0.02); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon { width: 44px; height: 44px; border: 1px solid #252525; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.upload-icon svg { width: 20px; height: 20px; stroke: #3a3a3a; fill: none; stroke-width: 1.5; }
+.upload-text { font-size: 11px; color: #3a3a3a; line-height: 2; }
+.upload-text em { font-style: normal; color: var(--green); }
+
+/* ── Preview ── */
+.preview-wrap {
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #080808;
+  position: relative; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
+}
+.preview-wrap img { width: 100%; height: 100%; object-fit: contain; }
+.preview-empty { font-size: 10px; color: #1e1e1e; letter-spacing: 3px; animation: blink 1.5s step-end infinite; }
+
+.corner { position: absolute; width: 12px; height: 12px; }
+.corner.tl { top: 8px; left: 8px; border-top: 1px solid var(--green); border-left: 1px solid var(--green); }
+.corner.tr { top: 8px; right: 8px; border-top: 1px solid var(--green); border-right: 1px solid var(--green); }
+.corner.bl { bottom: 8px; left: 8px; border-bottom: 1px solid var(--green); border-left: 1px solid var(--green); }
+.corner.br { bottom: 8px; right: 8px; border-bottom: 1px solid var(--green); border-right: 1px solid var(--green); }
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 2px; display: none; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  animation: scanline 1.4s linear infinite;
+}
+@keyframes scanline { from { top: -2px; } to { top: 100%; } }
+
+/* ── Frame strip ── */
+.frame-section { display: none; flex-direction: column; gap: 8px; }
+.frame-section.on { display: flex; }
+.frame-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.frame-strip::-webkit-scrollbar { display: none; }
+.frame-thumb { flex-shrink: 0; width: 72px; height: 50px; border-radius: 4px; object-fit: cover; border: 2px solid transparent; cursor: pointer; touch-action: manipulation; transition: border-color 0.15s; }
+.frame-thumb.active { border-color: var(--green); }
+
+/* ── Log ── */
+.log { background: #070707; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 10px; line-height: 1.9; max-height: 70px; overflow-y: auto; scrollbar-width: none; }
+.log::-webkit-scrollbar { display: none; }
+.log-line { display: block; color: #2a2a2a; }
+.log-line.ok { color: var(--green); }
+.log-line.warn { color: var(--amber); }
+.log-line.err { color: var(--red); }
+
+/* ── Results ── */
+.results-meta { display: flex; align-items: center; justify-content: space-between; }
+.item-count { font-size: 9px; color: #2a2a2a; letter-spacing: 2px; }
+
+.scanning-row { display: none; align-items: center; gap: 10px; font-size: 10px; color: var(--green); }
+.scanning-row.on { display: flex; }
+.spin { width: 12px; height: 12px; border: 1.5px solid #1a3a1f; border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 32px 20px; color: #1e1e1e; font-size: 10px; line-height: 2.4; letter-spacing: 2px; }
+
+/* ── Card ── */
+.result-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; animation: rise 0.3s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.card-top { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.card-tag { font-size: 8px; letter-spacing: 2px; color: var(--green); margin-bottom: 4px; }
+.cat-badge { font-size: 8px; letter-spacing: 1.5px; padding: 3px 7px; border-radius: 3px; background: #1a1a1a; color: #444; }
+.conf { font-size: 8px; letter-spacing: 1px; padding: 3px 8px; border-radius: 3px; white-space: nowrap; }
+.c-hi { background: #0a1a0d; color: var(--green); }
+.c-med { background: #1a1200; color: var(--amber); }
+.c-lo { background: #1a1a1a; color: #555; }
+
+.card-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.brand { font-size: 9px; color: #444; letter-spacing: 2px; margin-bottom: 2px; }
+.pname { font-family: var(--display); font-size: 24px; letter-spacing: 1px; color: #e0e0e0; line-height: 1.1; }
+.pdesc { font-size: 11px; color: #444; line-height: 1.7; }
+.price-row { display: flex; align-items: baseline; gap: 8px; }
+.price { font-family: var(--display); font-size: 26px; color: var(--amber); letter-spacing: 1px; }
+.price-lbl { font-size: 9px; color: #333; letter-spacing: 1px; }
+
+.links-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.shop-link {
+  display: block; text-align: center; font-size: 9px; letter-spacing: 1.5px; color: #444;
+  border: 1px solid var(--border); border-radius: 7px; padding: 11px 6px; text-decoration: none;
+  touch-action: manipulation; transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.shop-link:active { color: var(--green); border-color: var(--green); background: rgba(0,255,65,0.05); }
+
+/* ── Fixed CTA ── */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  background: linear-gradient(to top, rgba(10,10,10,1) 50%, rgba(10,10,10,0));
+  pointer-events: none;
+}
+.scan-btn {
+  width: 100%; max-width: 600px; margin: 0 auto; display: block;
+  background: var(--green); color: #000; border: none; border-radius: 10px;
+  padding: 17px; font-family: var(--display); font-size: 22px; letter-spacing: 4px;
+  cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
+  transition: opacity 0.15s, transform 0.1s; pointer-events: all;
+}
+.scan-btn:active { transform: scale(0.98); opacity: 0.88; }
+.scan-btn:disabled { opacity: 0.2; }
+
+@media (min-width: 600px) {
+  .scroll-body { padding-left: 24px; padding-right: 24px; }
+  .bottom-bar { padding-left: 24px; padding-right: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">FITCHECK//</div>
+  <div class="status-pill"><div class="dot"></div>ONLINE</div>
+</div>
+
+<div class="scroll-body">
+
+  <div>
+    <span class="label">// INPUT SOURCE</span>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('url')">SOCIAL URL</button>
+      <button class="tab" onclick="switchTab('upload')">UPLOAD</button>
+    </div>
+  </div>
+
+  <!-- URL panel -->
+  <div class="url-panel" id="panel-url">
+    <div class="platform-row">
+      <span class="chip chip-ig">INSTAGRAM</span>
+      <span class="chip chip-tt">TIKTOK</span>
+    </div>
+    <input class="text-input" type="url" id="socialUrl" inputmode="url" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Paste IG or TikTok link..." />
+    <div class="backend-wrap">
+      <div class="backend-top">
+        <span class="label" style="margin:0">// RAILWAY BACKEND</span>
+        <span class="b-status b-idle" id="bStatus">NOT SET</span>
+      </div>
+      <input class="text-input" type="url" id="backendUrl" inputmode="url" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="https://your-app.up.railway.app" style="padding:10px 12px;font-size:11px;" oninput="onBInput()" />
+      <span class="b-hint">Deploy fitcheck-backend to Railway, paste URL above</span>
+    </div>
+    <button class="outline-btn" id="extractBtn" onclick="extractFromUrl()">EXTRACT FRAMES</button>
+  </div>
+
+  <!-- Upload panel -->
+  <div class="upload-panel" id="panel-upload">
+    <div class="upload-zone">
+      <input type="file" id="fileInput" accept="image/*,video/*" />
+      <div class="upload-icon">
+        <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      </div>
+      <div class="upload-text">Tap to upload image or video<br><em>JPG · PNG · MP4 · MOV</em></div>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div>
+    <span class="label">// PREVIEW</span>
+    <div class="preview-wrap" id="previewArea">
+      <div class="preview-empty">NO INPUT</div>
+    </div>
+  </div>
+
+  <!-- Frames -->
+  <div class="frame-section" id="frameSection">
+    <span class="label">// SELECT FRAME TO SCAN</span>
+    <div class="frame-strip" id="frameStrip"></div>
+  </div>
+
+  <!-- Log -->
+  <div class="log" id="logEl">
+    <span class="log-line">FITCHECK ready</span>
+    <span class="log-line">Paste a link or upload a file</span>
+  </div>
+
+  <!-- Results -->
+  <div class="results-meta">
+    <span class="label" style="margin:0">// DETECTED ITEMS</span>
+    <span class="item-count" id="itemCount"></span>
+  </div>
+
+  <div class="scanning-row" id="scanRow">
+    <div class="spin"></div>
+    <span id="scanLabel">ANALYZING FIT...</span>
+  </div>
+
+  <div id="results">
+    <div class="empty-state">LOAD A VIDEO OR IMAGE<br>TO BEGIN DETECTION</div>
+  </div>
+
+</div>
+
+<div class="bottom-bar">
+  <button class="scan-btn" id="analyzeBtn" onclick="analyze()" disabled>SCAN FIT</button>
+</div>
+
+<script>
+let b64 = null, mtype = 'image/jpeg', frames = [];
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active',(i===0)===(t==='url')));
+  document.getElementById('panel-url').classList.toggle('hidden', t!=='url');
+  const up = document.getElementById('panel-upload');
+  up.classList.toggle('visible', t==='upload');
+}
+
+function log(msg, type='') {
+  const c = document.getElementById('logEl');
+  const s = document.createElement('span');
+  s.className = 'log-line'+(type?' '+type:'');
+  s.textContent = '> '+msg;
+  c.appendChild(s);
+  c.scrollTop = c.scrollHeight;
+}
+
+function onBInput() {
+  const v = document.getElementById('backendUrl').value.trim();
+  const el = document.getElementById('bStatus');
+  el.className = 'b-status b-idle';
+  el.textContent = v ? '—' : 'NOT SET';
+}
+
+document.getElementById('fileInput').addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  log('File: '+file.name);
+  const isVid = file.type.startsWith('video/');
+  mtype = isVid ? 'image/jpeg' : (file.type||'image/jpeg');
+  if (isVid) {
+    log('Video — extracting frames...', 'warn');
+    clientFrames(URL.createObjectURL(file));
+  } else {
+    document.getElementById('frameSection').classList.remove('on');
+    const r = new FileReader();
+    r.onload = e => { b64=e.target.result.split(',')[1]; showPrev(e.target.result); log('Image ready','ok'); document.getElementById('analyzeBtn').disabled=false; };
+    r.readAsDataURL(file);
+  }
+}
+
+async function extractFromUrl() {
+  const url = document.getElementById('socialUrl').value.trim();
+  const backend = document.getElementById('backendUrl').value.trim().replace(/\/$/,'');
+  const el = document.getElementById('bStatus');
+  if (!url) { log('No URL entered','err'); return; }
+  if (!backend) { log('Set backend URL first','err'); return; }
+  const btn = document.getElementById('extractBtn');
+  btn.disabled=true; btn.textContent='EXTRACTING...';
+  el.className='b-status b-loading'; el.textContent='LOADING';
+  log('Sending to backend...');
+  try {
+    const res = await fetch(backend+'/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error||'Backend error');
+    el.className='b-status b-ok'; el.textContent='OK';
+    log(data.count+' frames received','ok');
+    renderStrip(data.frames);
+  } catch(e) {
+    el.className='b-status b-err'; el.textContent='ERROR';
+    log('Error: '+e.message,'err');
+  } finally { btn.disabled=false; btn.textContent='EXTRACT FRAMES'; }
+}
+
+function clientFrames(videoUrl) {
+  const vid = document.createElement('video');
+  vid.src=videoUrl; vid.muted=true; vid.playsInline=true; vid.preload='metadata';
+  vid.addEventListener('loadedmetadata', () => {
+    const dur=vid.duration, n=Math.min(8,Math.max(3,Math.floor(dur/2)));
+    const times=Array.from({length:n},(_,i)=>dur*0.05+(dur*0.9/(n-1))*i);
+    const canvas=document.createElement('canvas'), ctx=canvas.getContext('2d');
+    const collected=[]; let idx=0;
+    function next() { if(idx>=times.length){renderStrip(collected);log('Extracted '+collected.length+' frames','ok');return;} vid.currentTime=times[idx]; }
+    vid.addEventListener('seeked',function(){canvas.width=vid.videoWidth||640;canvas.height=vid.videoHeight||360;ctx.drawImage(vid,0,0,canvas.width,canvas.height);collected.push(canvas.toDataURL('image/jpeg',0.85).split(',')[1]);idx++;next();});
+    next();
+  });
+  vid.load();
+}
+
+function renderStrip(arr) {
+  frames=arr;
+  const strip=document.getElementById('frameStrip');
+  strip.innerHTML='';
+  document.getElementById('frameSection').classList.add('on');
+  arr.forEach((f,i)=>{
+    const img=document.createElement('img');
+    img.className='frame-thumb'+(i===0?' active':'');
+    img.src='data:image/jpeg;base64,'+f;
+    img.onclick=()=>pick(i);
+    strip.appendChild(img);
+  });
+  pick(0);
+}
+
+function pick(i) {
+  document.querySelectorAll('.frame-thumb').forEach((t,j)=>t.classList.toggle('active',j===i));
+  b64=frames[i]; mtype='image/jpeg';
+  showPrev('data:image/jpeg;base64,'+frames[i]);
+  document.getElementById('analyzeBtn').disabled=false;
+  log('Frame '+(i+1)+' selected');
+}
+
+function showPrev(src) {
+  document.getElementById('previewArea').innerHTML=`<img src="${src}" alt="preview"/><div class="scan-line" id="sl"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>`;
+}
+
+async function analyze() {
+  if (!b64) return;
+  document.getElementById('analyzeBtn').disabled=true;
+  document.getElementById('scanRow').classList.add('on');
+  document.getElementById('results').innerHTML='';
+  document.getElementById('itemCount').textContent='';
+  const sl=document.getElementById('sl');
+  if(sl) sl.style.display='block';
+  log('Sending to Claude Vision...','ok');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are a fashion product detection AI. Identify every clothing item, accessory, footwear, or fashion product visible on any person in the image. Return ONLY a valid JSON array, no markdown or explanation. Each object: {"category":"Sneakers|T-Shirt|Pants|Cap|Watch|Bag|Jacket|Sunglasses|etc","name":"specific product name","brand":"brand or Unknown","description":"1-2 sentence visual description","priceMin":40,"priceMax":200,"currency":"USD","searchQuery":"best search string","confidence":"high|medium|low"}. Return 3-8 items. JSON array only.`,
+        messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mtype,data:b64}},{type:'text',text:'Identify all clothing and fashion products. JSON array only.'}]}]
+      })
+    });
+    const data=await res.json();
+    const raw=data.content.map(b=>b.text||'').join('');
+    log('Analysis complete','ok');
+    let items=[];
+    try{items=JSON.parse(raw.replace(/```json|```/g,'').trim());}catch{const m=raw.match(/\[[\s\S]*\]/);if(m)items=JSON.parse(m[0]);}
+    if(!Array.isArray(items)||!items.length) throw new Error('No items detected');
+    log(items.length+' items found','ok');
+    renderCards(items);
+    setTimeout(()=>document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'}),120);
+  } catch(e) {
+    log('Error: '+e.message,'err');
+    document.getElementById('results').innerHTML=`<div class="empty-state" style="color:#ff3a3a">SCAN FAILED<br><span style="font-size:9px;color:#552020">${e.message}</span></div>`;
+  } finally {
+    document.getElementById('analyzeBtn').disabled=false;
+    document.getElementById('scanRow').classList.remove('on');
+    if(sl) sl.style.display='none';
+  }
+}
+
+function renderCards(items) {
+  const c=document.getElementById('results');
+  c.innerHTML='';
+  document.getElementById('itemCount').textContent=items.length+' ITEMS //';
+  items.forEach((item,i)=>{
+    const cf=(item.confidence||'low').toLowerCase();
+    const cfClass=cf==='high'?'c-hi':cf==='medium'?'c-med':'c-lo';
+    const price=(item.priceMin&&item.priceMax)?`$${item.priceMin}–$${item.priceMax}`:'N/A';
+    const q=encodeURIComponent(item.searchQuery||item.name||'');
+    const card=document.createElement('div');
+    card.className='result-card';
+    card.style.animationDelay=(i*80)+'ms';
+    card.innerHTML=`
+      <div class="card-top">
+        <div><div class="card-tag">// ITEM ${String(i+1).padStart(2,'0')}</div><span class="cat-badge">${item.category||'ITEM'}</span></div>
+        <span class="conf ${cfClass}">${cf.toUpperCase()}</span>
+      </div>
+      <div class="card-body">
+        <div><div class="brand">${(item.brand||'UNKNOWN').toUpperCase()}</div><div class="pname">${item.name||'Unknown'}</div></div>
+        ${item.description?`<div class="pdesc">${item.description}</div>`:''}
+        <div class="price-row"><div class="price">${price}</div><div class="price-lbl">EST. RETAIL</div></div>
+        <div class="links-grid">
+          <a class="shop-link" href="https://www.google.com/search?q=${q}&tbm=shop" target="_blank" rel="noopener">GOOGLE SHOP</a>
+          <a class="shop-link" href="https://stockx.com/search?s=${q}" target="_blank" rel="noopener">STOCKX</a>
+          <a class="shop-link" href="https://www.goat.com/search?query=${q}" target="_blank" rel="noopener">GOAT</a>
+          <a class="shop-link" href="https://www.ssense.com/en-us/search?q=${q}" target="_blank" rel="noopener">SSENSE</a>
+        </div>
+      </div>`;
+    c.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
