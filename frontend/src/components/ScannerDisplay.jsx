@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { getStoreLinks } from './ResultsPanel';
 import './ScannerDisplay.css';
 
-const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BACKEND = import.meta.env.VITE_API_URL || 'https://what-fit-is-this-production.up.railway.app';
 
 
 export default function ScannerDisplay({ imageSrc, isScanning, results }) {

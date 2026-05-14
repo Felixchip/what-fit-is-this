@@ -5,7 +5,7 @@ import ResultsPanel from './components/ResultsPanel';
 import FrameTimeline from './components/FrameTimeline';
 import './App.css';
 
-const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BACKEND = import.meta.env.VITE_API_URL || 'https://what-fit-is-this-production.up.railway.app';
 
 function App() {
   const [videoUrl, setVideoUrl] = useState('');
