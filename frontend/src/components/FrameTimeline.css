@@ -1,0 +1,215 @@
+/* ─── Root container ─────────────────────────────────────────────────────────── */
+.ft-root {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  background: rgba(10, 10, 10, 0.96);
+  position: relative;
+  z-index: 10;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────────── */
+.ft-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.ft-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.ft-counter {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--green);
+  letter-spacing: 2px;
+}
+
+.ft-ts {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+  letter-spacing: 1px;
+}
+
+/* ─── Carousel strip ─────────────────────────────────────────────────────────── */
+.ft-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Prev / Next navigation buttons */
+.ft-nav {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--green);
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  height: 70px;
+  display: flex;
+  align-items: center;
+}
+
+.ft-nav:hover:not(.ft-nav-disabled) {
+  background: rgba(0, 255, 65, 0.08);
+  border-color: var(--green);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.15);
+}
+
+.ft-nav-disabled {
+  color: var(--muted);
+  border-color: #1a1a1a;
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Thumbnail window */
+.ft-thumbs {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+/* Individual thumbnail button */
+.ft-thumb-btn {
+  flex-shrink: 0;
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  width: 72px;
+  height: 70px;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
+
+.ft-thumb-btn:hover {
+  border-color: var(--muted);
+}
+
+.ft-thumb-btn.ft-active {
+  border-color: var(--green);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.4), inset 0 0 8px rgba(0, 255, 65, 0.08);
+}
+
+.ft-thumb-img {
+  width: 100%;
+  height: 54px;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.3) contrast(1.1);
+  transition: filter 0.2s;
+}
+
+.ft-active .ft-thumb-img {
+  filter: none;
+}
+
+/* Timestamp label under thumb */
+.ft-thumb-ts {
+  width: 100%;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  padding: 2px 0;
+  background: rgba(0, 0, 0, 0.8);
+  border-top: 1px solid var(--border);
+}
+
+.ft-active .ft-thumb-ts {
+  color: var(--amber);
+  border-top-color: var(--green);
+}
+
+/* Active pip dot on top of thumb */
+.ft-active-pip {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pip-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pip-pulse {
+  from { box-shadow: 0 0 4px var(--green); }
+  to   { box-shadow: 0 0 12px var(--green); }
+}
+
+/* ─── Progress track ─────────────────────────────────────────────────────────── */
+.ft-progress-track {
+  position: relative;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  border-top: 1px solid var(--border);
+  overflow: visible;
+}
+
+.ft-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(0, 255, 65, 0.12);
+  border-right: 1px solid var(--green);
+  transition: width 0.3s ease;
+}
+
+/* Tick marks for each frame */
+.ft-tick {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 1px solid #333;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.ft-tick:hover {
+  background: var(--muted);
+  transform: translate(-50%, -50%) scale(1.4);
+}
+
+.ft-tick-active {
+  background: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  transform: translate(-50%, -50%) scale(1.3);
+}

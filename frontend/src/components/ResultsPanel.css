@@ -4,13 +4,55 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  position: relative;
+  z-index: 10;
 }
 
 .results-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 16px;
   width: 100%;
+  padding: 16px;
+  
+  /* Holographic Glass System */
+  background: 
+    linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+    rgba(5, 5, 5, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid var(--border);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.95),
+    inset 0 0 80px rgba(0, 255, 65, 0.02);
+  
+  margin-bottom: 24px;
+}
+
+/* The 'Glass Veil' — Frosted smear transition zone */
+.results-header::after {
+  content: '';
+  position: absolute;
+  top: 100%; /* Sits exactly below the header */
+  left: 0;
+  width: 100%;
+  height: 60px;
+  pointer-events: none;
+  
+  background: linear-gradient(to bottom, rgba(5, 5, 5, 0.4), transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  
+  /* Mask ensures the blur smoothly fades out instead of a hard cut */
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
+  
+  z-index: -1; /* Behind header content but above relative grid items */
 }
 
 .line-break {
@@ -32,6 +74,14 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
+  
+  /* Fade under header effect */
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0px, black 150px);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0px, black 150px);
+  
+  /* Ensure mask doesn't scroll with content in some Browsers */
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
 }
 
 .result-card {
@@ -72,8 +122,11 @@
 }
 
 .result-name {
-  font-size: 24px;
+  font-family: var(--display);
+  font-size: 28px;
   color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .result-price-row {

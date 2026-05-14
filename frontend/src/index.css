@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+/* Custom Fonts are now loaded in index.html for better stability */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -16,7 +16,7 @@
   --text: #e0e0e0;
   --muted: #888;
   --mono: 'Space Mono', monospace;
-  --display: 'Bebas Neue', sans-serif;
+  --display: 'Jersey 10', sans-serif;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --hud-blue: #2b5cff;

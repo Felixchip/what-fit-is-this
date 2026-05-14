@@ -1,49 +1,259 @@
 .scanner-container {
   position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   background: #000;
   border: 1px solid var(--border);
   overflow: hidden;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  perspective: 1200px; /* Added for 3D depth */
+}
+
+/* ─── Pixelated Edge System ─────────────────────────────────────────────────── */
+
+.scan-complete {
+  overflow: hidden;
+}
+
+.pixelated-edge-wrapper {
+  transition: clip-path 0.6s cubic-bezier(0.2, 0.8, 0.3, 1), transform 0.1s ease-out;
+  transform: 
+    rotateY(calc((var(--mouse-x) - 0.5) * 12deg)) 
+    rotateX(calc((0.5 - var(--mouse-y)) * 12deg));
+  transform-style: preserve-3d;
+}
+
+/* Scattered pixel particles */
+.pixel-particles {
+  position: absolute;
+  inset: -30px;
+  z-index: 5; /* Increased to overlap image wrapper */
+  pointer-events: none;
+  overflow: hidden;
+  /* Particle Parallax: moves slightly more than the image for depth */
+  transform: 
+    translateZ(30px)
+    translateX(calc((var(--mouse-x) - 0.5) * 20px))
+    translateY(calc((var(--mouse-y) - 0.5) * 20px));
+}
+
+.pixel-particle {
+  position: absolute;
+  /* Multi-layered animations: Drift + Pulse */
+  animation: 
+    particleDrift var(--drift-dur, 6s) ease-in-out infinite alternate,
+    pixelPulse var(--pulse-dur, 3s) ease-in-out infinite alternate;
+  animation-delay: var(--anim-delay, 0s);
+  background: white; /* Default background */
+  will-change: transform, opacity;
+}
+
+.pixel-particle.noise {
+  background: rgba(255, 255, 255, 0.4);
+  --drift-dur: 3s;
+  --pulse-dur: 1.5s;
+}
+
+.pixel-particle.outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5); /* Increased contrast for wireframe only look */
+}
+
+/* ─── Staggered 'Bitstream' Movement ────────────────────────────────────────── */
+
+.pixel-particle:nth-child(2n) {
+  --drift-dur: 7s;
+  --pulse-dur: 4s;
+  --anim-delay: -1s;
+}
+
+.pixel-particle:nth-child(3n) {
+  --drift-dur: 5s;
+  --pulse-dur: 2s;
+  --anim-delay: -3s;
+}
+
+.pixel-particle:nth-child(5n) {
+  --drift-dur: 9s;
+  --pulse-dur: 5s;
+  --anim-delay: -2s;
+}
+
+.pixel-particle:nth-child(7n) {
+  animation-name: particleDrift, pixelPulse, glitchJump;
+  animation-duration: 4s, 3s, 0.2s;
+  animation-iteration-count: infinite, infinite, infinite;
+  animation-delay: -0.5s, 0s, 3s;
+}
+
+@keyframes particleDrift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { 
+    transform: translate(
+      calc(var(--drift-x) * 12px), 
+      calc(var(--drift-y) * 8px)
+    ) rotate(5deg); 
+  }
+  100% { 
+    transform: translate(
+      calc(var(--drift-x) * 20px), 
+      calc(var(--drift-y) * 15px)
+    ) rotate(-5deg); 
+  }
+}
+
+@keyframes pixelPulse {
+  0% { opacity: 0.2; transform: scale(0.8); }
+  50% { 
+    opacity: 0.9; 
+    transform: scale(1.1) translate(
+      calc(var(--drift-x) * 5px), 
+      calc(var(--drift-y) * 5px)
+    ); 
+  }
+  100% { opacity: 0.3; transform: scale(1); }
+}
+
+@keyframes glitchJump {
+  0%, 90% { transform: translate(0, 0); }
+  92% { transform: translate(calc(var(--drift-x) * 20px), calc(var(--drift-y) * -10px)); }
+  94% { transform: translate(calc(var(--drift-x) * -10px), calc(var(--drift-y) * 25px)); }
+  96% { transform: translate(calc(var(--drift-x) * 15px), calc(var(--drift-y) * 15px)); }
+  100% { transform: translate(0, 0); }
 }
 
 .scanner-img {
-  width: 100%;
-  aspect-ratio: 4/5;
-  object-fit: cover;
+  width: auto;
+  max-width: 100%;
+  max-height: 60dvh;
+  margin: 0 auto;
   display: block;
   filter: contrast(1.1) brightness(0.9) grayscale(0.2);
 }
 
+.scanner-view-port {
+  overflow: hidden;
+  background: #000;
+}
+
+/* Neural Scanline — Sharp neon laser with shroud */
 .scanner-sweep {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 5px;
+  top: 0; left: 0; width: 100%; height: 1px;
+  background: var(--green);
+  box-shadow: 
+    0 0 10px var(--green),
+    0 0 20px var(--green);
+  z-index: 10;
+  animation: neuralSweep 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Shroud effect trailing the scanline */
+.scanner-sweep::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; width: 100%; height: 15vh;
+  background: linear-gradient(to top, rgba(0, 255, 65, 0.15), transparent);
+  pointer-events: none;
+}
+
+@keyframes neuralSweep {
+  0% { transform: translateY(-50px); opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { transform: translateY(70vh); opacity: 0; }
+}
+
+/* Technical HUD Elements */
+.scanner-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px);
+  background-size: 25px 25px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.25; /* Static transparency for performance */
+}
+
+/* AR HUD Brackets */
+.hud-bracket {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--green);
+  z-index: 8;
+  opacity: 0.6;
+  animation: bracketPulse 2s ease-in-out infinite alternate;
+}
+
+.hud-bracket.tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+.hud-bracket.tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+.hud-bracket.bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+.hud-bracket.br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+@keyframes bracketPulse {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.05); opacity: 0.8; }
+}
+
+/* Progress HUD Styling */
+.scanner-status-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.progress-container {
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid var(--green);
+  padding: 16px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  position: relative;
+  z-index: 20;
+}
+
+/* Technical readout sub-labels */
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Jersey 10', Courier, monospace;
+}
+
+.tech-msg {
+  color: var(--green);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.tech-percent {
+  color: var(--green);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Segmented Progress Bar */
+.progress-bar-outer {
+  height: 6px;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
   background: var(--green);
   box-shadow: 0 0 15px var(--green);
-  opacity: 0.8;
-  animation: sweep 3s linear infinite;
-  z-index: 2;
-}
-
-@keyframes sweep {
-  0% { transform: translateY(-10px); }
-  100% { transform: translateY(600px); }
-}
-
-.scanner-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.7);
-  color: var(--green);
-  padding: 8px 16px;
-  border: 1px solid var(--green);
-  font-family: var(--display);
-  font-size: 24px;
-  letter-spacing: 4px;
-  z-index: 3;
+  transition: width 0.15s linear;
 }
 
 .scanner-results-overlay {
@@ -53,38 +263,259 @@
   z-index: 2;
 }
 
-.target-box {
+.anchor-point {
   position: absolute;
-  width: 80px;
-  height: 80px;
-  border: 2px solid;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: all 0.5s cubic-bezier(0.1, 0.8, 0.3, 1);
+  z-index: 2;
+  box-shadow: 0 0 10px currentColor;
+}
+.anchor-green { background: var(--green); }
+.anchor-amber { background: var(--amber); }
+
+/* ─── Floating Glassmorphic Cards ───────────────────────────────────────────── */
+
+.floating-cards-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  perspective: 800px;
+}
+
+.floating-card {
+  position: absolute;
+  width: 100px;
+  pointer-events: auto;
+  cursor: pointer;
+
+  /* Edgy/Brutalist Aesthetic */
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 6px;
+  
+  /* Cyberpunk Glow + Stacking Highlight */
+  box-shadow:
+    0 0 15px rgba(0, 255, 65, 0.1),
+    0 4px 20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.card-float-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  /* Entrance + Float decoupled from base transform */
+  animation-name: cardEntrance, cardFloat;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1), ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-direction: normal, alternate;
+  animation-fill-mode: both, none;
+}
+
+/* Depth layers — closer cards are larger/brighter */
+.floating-card.depth-1 {
+  width: 85px;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.floating-card.depth-2 {
+  width: 100px;
+  border-color: rgba(0, 255, 65, 0.3); /* Green accent */
+}
+
+.floating-card.depth-3 {
+  width: 115px;
+  border-color: rgba(255, 191, 0, 0.4); /* Amber accent */
+  box-shadow:
+    0 0 25px rgba(255, 191, 0, 0.15),
+    0 8px 40px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.card-reticle {
+  position: absolute;
+  inset: -12px;
+  border: 1px solid var(--green);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  z-index: 10;
+  /* Corner L-brackets */
+  clip-path: polygon(
+    0 0, 25% 0, 25% 1.5px, 1.5px 1.5px, 1.5px 25%, 0 25%,
+    75% 0, 100% 0, 100% 25%, 98.5% 25%, 98.5% 1.5px, 75% 1.5px,
+    100% 75%, 100% 100%, 75% 100%, 75% 98.5%, 98.5% 98.5%, 98.5% 75%,
+    0 75%, 0 100%, 25% 100%, 25% 98.5%, 1.5% 98.5%, 1.5% 75%
+  );
+}
+
+.floating-card:hover .card-reticle {
+  opacity: 1;
+  inset: -6px;
+}
+
+.floating-card:hover {
+  transform: translateY(-5px) scale(1.1) rotateY(4deg) !important;
+  box-shadow:
+    0 0 35px rgba(0, 255, 65, 0.4),
+    0 12px 60px rgba(0, 0, 0, 0.95),
+    inset 0 0 0 1px rgba(0, 255, 65, 0.3);
+  border-color: var(--green);
+  z-index: 999 !important; /* Pop to very top on hover */
+}
+
+/* Card thumbnail */
+.floating-card-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0;
+  overflow: hidden;
+  margin-bottom: 6px;
+  position: relative;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.floating-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: contrast(1.1) saturate(1.1);
+  border-radius: 0;
+}
+
+/* Card info */
+.floating-card-info {
+  padding: 2px 2px 0;
+}
+
+.floating-card-brand {
+  font-family: var(--display);
+  font-size: 7px;
+  letter-spacing: 1.5px;
+  color: var(--amber);
+  margin-bottom: 2px;
+}
+
+.floating-card-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-card-price {
+  font-family: var(--display);
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+}
+
+/* Confidence badge */
+.floating-card-conf {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-family: var(--display);
+  font-size: 6px;
+  letter-spacing: 0.5px;
+  padding: 2px 4px;
+  border-radius: 0;
+  z-index: 5;
+}
+
+.floating-card-conf.high {
+  background: rgba(0, 0, 0, 0.9);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
+.floating-card-conf.medium {
+  background: rgba(0, 0, 0, 0.9);
+  color: var(--amber);
+  border: 1px solid var(--amber);
+}
+
+.floating-card-conf.low {
+  background: rgba(0, 0, 0, 0.9);
+  color: #ff5555;
+  border: 1px solid #ff5555;
+}
+
+/* Entrance animation — staggered via animationDelay */
+@keyframes cardEntrance {
+  0% {
+    transform: translateY(20px) scale(0.85);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Gentle float bob */
+@keyframes cardFloat {
+  0% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 0 -6px;
+  }
+}
+
+/* ─── Preserved Legacy Styles ───────────────────────────────────────────────── */
+
+.scanner-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: auto;
+  background: rgba(0,0,0,0.4);
+}
+
+.scanner-modal {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid var(--green);
+  z-index: 10;
+  padding: 16px;
+  width: 85%;
+  max-width: 320px;
+  pointer-events: auto;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 1), inset 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: none; border: none;
+  color: var(--green);
+  font-family: var(--display);
+  cursor: pointer;
+  font-size: 14px;
+}
+.modal-close:hover {
+  color: #fff;
 }
 
 .border-green { border-color: var(--green); }
 .border-amber { border-color: var(--amber); }
-
-.target-box::before, .target-box::after {
-  content: "";
-  position: absolute;
-  background: currentColor;
-}
-
-.target-box::before { top: 50%; left: -20px; width: 15px; height: 1px; }
-.target-box::after { left: 50%; top: -20px; height: 15px; width: 1px; }
-
-.target-label {
-  position: absolute;
-  top: 100%; left: 0;
-  margin-top: 4px;
-  background: rgba(0,0,0,0.8);
-  font-size: 10px;
-  line-height: 1.4;
-  padding: 2px 4px;
-  white-space: nowrap;
-  color: inherit;
-}
 
 /* Corners */
 .corner {
@@ -98,3 +529,38 @@
 .corner.top-right { top: 10px; right: 10px; border-left: none; border-bottom: none; }
 .corner.bottom-left { bottom: 10px; left: 10px; border-right: none; border-top: none; }
 .corner.bottom-right { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+.clickable-hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* ─── Product Image Loading Shimmer ─────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.floating-card-thumb.loading-product::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.06) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+
+

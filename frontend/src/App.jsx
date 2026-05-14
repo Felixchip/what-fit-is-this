@@ -2,90 +2,146 @@ import React, { useState, useRef } from 'react';
 import HUDOverlay from './components/HUDOverlay';
 import ScannerDisplay from './components/ScannerDisplay';
 import ResultsPanel from './components/ResultsPanel';
+import FrameTimeline from './components/FrameTimeline';
 import './App.css';
 
+const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 function App() {
-  const [activeTab, setActiveTab] = useState('upload');
   const [videoUrl, setVideoUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractMsg, setExtractMsg] = useState('');
+
+  // Frames from video extraction
   const [frames, setFrames] = useState([]);
-  
+  const [timestamps, setTimestamps] = useState([]);
+  const [activeFrameIndex, setActiveFrameIndex] = useState(0);
+
+  // Currently displayed image
   const [imageSrc, setImageSrc] = useState(null);
   const [base64Data, setBase64Data] = useState(null);
   const [mimeType, setMimeType] = useState('image/jpeg');
-  
+
   const [isScanning, setIsScanning] = useState(false);
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
-  
+
   const fileInputRef = useRef(null);
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────────
 
   const resetAll = () => {
     setImageSrc(null);
     setBase64Data(null);
     setFrames([]);
+    setTimestamps([]);
+    setActiveFrameIndex(0);
     setResults([]);
     setError('');
+    setExtractMsg('');
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const loadFrame = (frames, index) => {
+    const b64 = frames[index];
+    setBase64Data(b64);
+    setImageSrc('data:image/jpeg;base64,' + b64);
+    setResults([]);
+    setError('');
+    setActiveFrameIndex(index);
+  };
 
+  const applyExtractedFrames = (receivedFrames, receivedTimestamps) => {
+    setFrames(receivedFrames);
+    setTimestamps(receivedTimestamps || []);
+    setActiveFrameIndex(0);
+    loadFrame(receivedFrames, 0);
+  };
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────────
+
+  /** Direct image file upload — no frame extraction needed */
+  const handleImageFile = (file) => {
     resetAll();
     setImageSrc(URL.createObjectURL(file));
     setMimeType(file.type);
-
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const b64 = event.target.result.split(',')[1];
-      setBase64Data(b64);
-    };
+    reader.onload = (ev) => setBase64Data(ev.target.result.split(',')[1]);
     reader.readAsDataURL(file);
   };
 
-  const handleVideoExtract = async () => {
-    if (!videoUrl) return;
+  /** Local video file upload → /extract-upload */
+  const handleVideoFile = async (file) => {
+    resetAll();
     setIsExtracting(true);
-    setError('');
-    
+    setExtractMsg('UPLOADING_VIDEO...');
+
     try {
-      const response = await fetch('http://localhost:3000/extract', {
+      const formData = new FormData();
+      formData.append('video', file);
+
+      const res = await fetch(`${BACKEND}/extract-upload`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ url: videoUrl })
+        body: formData,
       });
-      
-      const data = await response.json();
-      if (!response.ok) {
-         throw new Error(data.error || 'Failed to extract video');
-      }
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Extraction failed');
 
       const receivedFrames = data.frames || [];
-      if (receivedFrames.length > 0) {
-        setFrames(receivedFrames);
-        selectFrame(receivedFrames[0]);
-      } else {
-        throw new Error('No frames returned');
-      }
-      
+      if (receivedFrames.length === 0) throw new Error('No fashion frames found in video');
+
+      applyExtractedFrames(receivedFrames, data.timestamps);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setIsExtracting(false);
+      setExtractMsg('');
+    }
+  };
+
+  /** Dispatches image vs video local file */
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type.startsWith('video/')) {
+      handleVideoFile(file);
+    } else {
+      handleImageFile(file);
+    }
+  };
+
+  /** Social media URL extraction → /extract */
+  const handleVideoExtract = async () => {
+    if (!videoUrl) return;
+    resetAll();
+    setIsExtracting(true);
+    setExtractMsg('DOWNLOADING + FILTERING_FRAMES...');
+
+    try {
+      const res = await fetch(`${BACKEND}/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: videoUrl }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to extract video');
+
+      const receivedFrames = data.frames || [];
+      if (receivedFrames.length === 0) throw new Error('No fashion frames found in video');
+
+      applyExtractedFrames(receivedFrames, data.timestamps);
     } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to connect. Is backend running?');
     } finally {
       setIsExtracting(false);
+      setExtractMsg('');
     }
   };
 
-  const selectFrame = (b64) => {
-    setBase64Data(b64);
-    setImageSrc('data:image/jpeg;base64,' + b64);
-    setResults([]);
-    setError('');
-  };
-
+  /** Run full Claude Sonnet analysis on the selected frame */
   const handleScan = async () => {
     if (!base64Data) return;
     setIsScanning(true);
@@ -93,144 +149,126 @@ function App() {
     setResults([]);
 
     try {
-      const response = await fetch('http://localhost:3000/analyze', {
+      const res = await fetch(`${BACKEND}/analyze`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          image: base64Data,
-          mimeType: mimeType
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Data, mimeType }),
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Server error');
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
 
       let parsedResults = [];
       try {
-        const raw = data.result;
-        const clean = raw.replace(/```json|```/g, '').trim();
+        const clean = data.result.replace(/```json|```/g, '').trim();
         parsedResults = JSON.parse(clean);
-      } catch (parseErr) {
+      } catch {
         const match = data.result.match(/\[[\s\S]*\]/);
-        if (match) {
-          parsedResults = JSON.parse(match[0]);
-        } else {
-          throw new Error('Could not parse results');
-        }
+        if (match) parsedResults = JSON.parse(match[0]);
+        else throw new Error('Could not parse results');
       }
 
       setResults(parsedResults);
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Failed to analyze image. Confirm backend is running.');
+      setError(err.message || 'Failed to analyze. Confirm backend is running.');
     } finally {
       setIsScanning(false);
     }
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
+  const hasContent = imageSrc || frames.length > 0;
+
   return (
     <HUDOverlay>
-      {!imageSrc && frames.length === 0 && (
-        <div className="upload-container hud-panel">
-          <h2 className="text-green uppercase glitch-hover" style={{marginBottom: '16px'}}>// INITIALIZE SYSTEM</h2>
-          
-          <div className="tabs">
-             <button className={`tab ${activeTab === 'upload' ? 'active' : ''}`} onClick={() => setActiveTab('upload')}>
-               UPLOAD
-             </button>
-             <button className={`tab ${activeTab === 'url' ? 'active' : ''}`} onClick={() => setActiveTab('url')}>
-               SOCIAL URL
-             </button>
+      {/* ── Landing / input screen ── */}
+      {!hasContent && !isExtracting && (
+        <div className="dashed-container">
+          <h2 className="brutalist-section-title">DROP THE FIT</h2>
+          <p className="brutalist-subtitle">PASTE IG OR TIKTOK VIDEO URL ...</p>
+
+          <div className="brutalist-input-row">
+            <input
+              type="url"
+              className="brutalist-text-input"
+              value={videoUrl}
+              onChange={e => setVideoUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleVideoExtract()}
+              placeholder="https://tiktok.com/@..."
+            />
+            <button className="brutalist-btn btn-green" disabled={isExtracting || !videoUrl} onClick={handleVideoExtract}>
+              EXTRACT
+            </button>
           </div>
 
-          {activeTab === 'upload' && (
-            <div style={{width: '100%'}}>
-              <p className="text-muted" style={{marginBottom: '24px'}}>UPLOAD FILE FOR DATA PROCESSING.</p>
-              <button className="btn" style={{width: '100%'}} onClick={() => fileInputRef.current?.click()}>
-                [ SELECT_FILE ]
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*" 
-                style={{ display: 'none' }} 
-              />
-            </div>
-          )}
+          <div className="brutalist-divider" />
 
-          {activeTab === 'url' && (
-            <div style={{width: '100%'}}>
-              <p className="text-muted" style={{marginBottom: '16px'}}>PASTE IG OR TIKTOK URL.</p>
-              <div className="input-row">
-                 <input 
-                   type="url" 
-                   className="text-input" 
-                   value={videoUrl}
-                   onChange={e => setVideoUrl(e.target.value)}
-                   placeholder="https://www.tiktok.com/@..."
-                 />
-                 <button className="btn" disabled={isExtracting} onClick={handleVideoExtract} style={{padding: '8px', fontSize: '16px'}}>
-                   {isExtracting ? 'RCV...' : 'EXTRACT'}
-                 </button>
-              </div>
-            </div>
-          )}
+          <button className="brutalist-btn btn-green full-width" onClick={() => fileInputRef.current?.click()}>
+            UPLOAD PHOTO / VIDEO FILE
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*,video/*"
+            style={{ display: 'none' }}
+          />
 
-          {error && <div className="error-msg text-red blink mt-4">{error}</div>}
+          {error && <div className="error-msg text-red" style={{ marginTop: '24px' }}>{error}</div>}
         </div>
       )}
 
-      {(imageSrc || frames.length > 0) && (
-        <div className="workspace">
-          <ScannerDisplay 
-            imageSrc={imageSrc} 
-            isScanning={isScanning} 
-            results={results} 
-          />
-          
-          {frames.length > 0 && (
-             <div className="frame-section">
-                <div className="frame-section-title">SELECT TARGET FRAME_</div>
-                <div className="frame-strip">
-                   {frames.map((frame, index) => (
-                      <img 
-                        key={index}
-                        src={`data:image/jpeg;base64,${frame}`}
-                        className={`frame-thumb ${base64Data === frame ? 'active' : ''}`}
-                        onClick={() => selectFrame(frame)}
-                        alt={`frame ${index}`}
-                      />
-                   ))}
-                </div>
-             </div>
-          )}
+      {/* ── Extracting state ── */}
+      {isExtracting && (
+        <div className="extracting-state">
+          <div className="extracting-spinner" />
+          <div className="extracting-label blink">{extractMsg || 'PROCESSING...'}</div>
+          <div className="extracting-sub">AI IS SCANNING FOR FASHION FRAMES</div>
+        </div>
+      )}
 
-          <div className="controls">
-            {(!isScanning && results.length === 0) && (
-              <button className="btn" onClick={handleScan} disabled={!base64Data}>
-                [ EXECUTE_SCAN ]
+      {/* ── Main workspace ── */}
+      {hasContent && !isExtracting && (
+        <div className="workspace">
+          <div className="sticky-interface">
+            <ScannerDisplay
+              imageSrc={imageSrc}
+              isScanning={isScanning}
+              results={results}
+            />
+
+            {/* Frame timeline — only when frames available */}
+            {frames.length > 0 && (
+              <FrameTimeline
+                frames={frames}
+                timestamps={timestamps}
+                activeIndex={activeFrameIndex}
+                onSelect={(idx) => {
+                  loadFrame(frames, idx);
+                }}
+              />
+            )}
+
+            {/* Scan / error controls */}
+            <div className="controls">
+              {!isScanning && results.length === 0 && (
+                <button className="btn" onClick={handleScan} disabled={!base64Data}>
+                  [ EXECUTE_SCAN ]
+                </button>
+              )}
+              {error && (
+                <div className="error-msg text-red blink">ERR: {error}</div>
+              )}
+              {/* Always show reset so user can restart without needing to scroll */}
+              <button className="btn reset-btn" onClick={resetAll}>
+                [ RESET_SYSTEM ]
               </button>
-            )}
-            
-            {error && (
-              <div className="error-msg text-red blink">
-                ERR: {error}
-              </div>
-            )}
+            </div>
           </div>
 
           <ResultsPanel results={results} />
-          
-          {(results.length > 0 || error || frames.length > 0) && (
-             <button className="btn reset-btn" onClick={resetAll}>
-               [ RESET_SYSTEM ]
-             </button>
-          )}
         </div>
       )}
     </HUDOverlay>
